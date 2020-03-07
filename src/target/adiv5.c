@@ -37,7 +37,7 @@
  */
 
 /* Values from ST RM0436 (STM32MP157), 66.9 APx_IDR
- * and ST RM0438 (STM32L5) 52.3.1, AP_IDR */
+ * and ST RM0439 (STM32L5) 51.3.2, AP_IDR */
 #define ARM_AP_TYPE_AHB  1
 #define ARM_AP_TYPE_APB  3
 #define ARM_AP_TYPE_AXI  4
@@ -309,21 +309,11 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
 	return pidr;
 }
 
-/* Prepare to read SYSROM and SYSROM PIDR
+/* DHCSR, Romtables and SYSROM can be read out under reset. No need
+ * to release reset here. However on a sleeping device, reading may fail.
+ * Try to halt the device.
  *
- * Try hard to halt, if not connecting under reset
- * Request TRCENA and default vector catch
- * release from reset when connecting under reset.
- *
- * E.g. Stm32F7
- * - fails reading romtable in WFI
- * - fails with some AP accesses when romtable is read under reset.
- * - fails reading some ROMTABLE entries w/o TRCENA
- * - fails reading outside SYSROM when halted from WFI and
- *   DBGMCU_CR not set.
- *
- * Keep a copy of DEMCR at startup to restore with exit, to
- * not interrupt tracing initialed by the CPU.
+ * For STM32F7 we can and must enable debug during sleep, if device uses WFI.
  */
 static bool cortexm_prepare(ADIv5_AP_t *ap)
 {
@@ -335,29 +325,22 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 #ifdef PLATFORM_HAS_DEBUG
 	uint32_t start_time = platform_time_ms();
 #endif
-	uint32_t dhcsr;
-	bool reset_seen = false;
+	adiv5_mem_read32(ap, CORTEXM_DHCSR); /* Remove CORTEXM_DHCSR_S_RESET_ST*/
 	while (true) {
 		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
-		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		uint32_t dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
 		 * 0x0xA05F0000  may happen.
 		 * M23/33 will have S_SDE set when debug is allowed
 		 */
 		if ((dhcsr != 0xffffffff) && /* Invalid read */
-			((dhcsr & 0xf000fff0) == 0)) {/* Check RAZ bits */
-			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST)  && !reset_seen) {
-				if (connect_assert_srst)
-					break;
-				reset_seen = true;
-				continue;
-			}
-			if ((dhcsr & dhcsr_valid) == dhcsr_valid) { /* Halted */
-				DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %"
-						   PRId32 "ms\n",
-						   dhcsr, platform_time_ms() - start_time);
+			((dhcsr & 0xf000fff0) == 0) && /* Check RAZ bits */
+			(((dhcsr & dhcsr_valid) == dhcsr_valid) || /* Halted */
+			 (connect_assert_srst && /* Still under reset */
+			  (dhcsr & CORTEXM_DHCSR_S_RESET_ST)))) { /* Reset seen */
+			DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %" PRId32
+					   "ms\n", dhcsr, platform_time_ms() - start_time);
 			break;
-			}
 		}
 		if (platform_timeout_is_expired(&to)) {
 			DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % "
@@ -367,36 +350,25 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 			return false;
 		}
 	}
-	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
-	uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
-		CORTEXM_DEMCR_VC_CORERESET;
-	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
-	platform_timeout_set(&to, cortexm_wait_timeout);
-	platform_srst_set_val(false);
-	while (1) {
-		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
-		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
-			break;
-		if (platform_timeout_is_expired(&to)) {
-			DEBUG_WARN("Error releasing from srst\n");
-			return false;
-		}
-	}
-	/* Apply device specific settings for successfull Romtable scan
-	 *
-	 * STM32F7 in WFI will not read ROMTABLE when using WFI
-	 */
 	if ((ap->dp->targetid >> 1 & 0x7ff) == 0x20) {
-		uint32_t dbgmcu_cr = 7;
+		/* This is very device specific and should go to the device file!*/
+		uint32_t dbgmcu_cr = 0;
 		uint32_t dbgmcu_cr_addr = 0xE0042004;
+		dbgmcu_cr |= 7;
 		switch ((ap->dp->targetid >> 16) & 0xfff) {
 		case 0x449:
 		case 0x451:
 		case 0x452:
-			ap->ap_storage = adiv5_mem_read32(ap, dbgmcu_cr_addr);
-			dbgmcu_cr = ap->ap_storage | 7;
-			adiv5_mem_write(ap, dbgmcu_cr_addr, &dbgmcu_cr, sizeof(dbgmcu_cr));
+			dbgmcu_cr = 7;
 			break;
+		case 0x450:
+			dbgmcu_cr_addr = 0x5c001004;
+			dbgmcu_cr = 0x0060017f;
+		}
+		if (dbgmcu_cr) {
+			adiv5_mem_write(ap, dbgmcu_cr_addr, &dbgmcu_cr, sizeof(dbgmcu_cr));
+			DEBUG_INFO("Setting DBGMCU_CR of know STM32 to %08" PRIx32 "\n",
+					   dbgmcu_cr);
 		}
 	}
 	return true;
@@ -405,12 +377,6 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
 	(void) num_entry;
-	addr &= 0xfffff000; /* Mask out base address */
-	if (addr == 0) /* No rom table on this AP */
-		return false;
-	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-	bool res = false;
-//#if defined(ENABLE_DEBUG)
 	char indent[recursion + 1];
 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
@@ -421,7 +387,6 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		DEBUG_WARN("%sFault reading ID registers\n", indent);
 		return false;
 	}
-
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		DEBUG_WARN("%s%d 0x%08" PRIx32": 0x%08" PRIx32
@@ -593,31 +558,11 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
 	}
 
-#if defined(ENABLE_DEBUG)
-	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
-	DEBUG_INFO("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08" PRIx32
-			   " CSW=%08"PRIx32"\n", apsel, ap->idr, cfg, ap->base, ap->csw);
-#endif
-	if (!apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB)) {
-		/* Test for protected Atmel devices. Access outside DSU fails.
-		 * For protected device, continue with Rom Table anyways.
-		 */
-		adiv5_dp_error(ap->dp);
-		adiv5_mem_read32(ap, CORTEXM_DHCSR);
-		if ( adiv5_dp_error(ap->dp) & ADIV5_DP_CTRLSTAT_STICKYERR) {
-			uint32_t err = adiv5_dp_error(ap->dp);
-			if (err & ADIV5_DP_CTRLSTAT_STICKYERR) {
-				DEBUG_WARN("...\nHit error on DHCSR read. Suspect protected Atmel "
-						   "part, skipping to PIDR check.\n");
-			}
-		} else {
-			if (!cortexm_prepare(ap)) {
-				free(ap);
-				return NULL;
-			}
-		}
-	}
-	adiv5_ap_ref(ap);
+	DEBUG_INFO("AP %3d: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32 "\n",
+	      apsel, ap->idr, adiv5_ap_read(ap, ADIV5_AP_CFG), ap->base, ap->csw);
+	if (!apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB) && !cortexm_prepare(ap))
+		return NULL;
+
 	return ap;
 }
 
