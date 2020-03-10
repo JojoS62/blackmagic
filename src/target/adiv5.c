@@ -442,8 +442,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 			DEBUG_WARN("Fault reading ROM table entry\n");
 		}
 
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32
-				   ", designer %3x Partno %3x\n", addr, memtype, designer,
+		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%" PRIx32 ", designer %3"
+			  PRIx32 " Partno %3" PRIx32 "\n", addr, memtype, designer,
 			  partno);
 #endif
 		if (recursion == 0) {
