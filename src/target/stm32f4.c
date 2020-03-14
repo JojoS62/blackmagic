@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2017, 2018  Uwe Bonnes
+ * Copyright (C) 2017, 2018, 2020  Uwe Bonnes
  *                           <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -106,6 +106,8 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define DBGMCU_IDCODE	0xE0042000
 #define DBGMCU_CR		0xE0042004
 #define DBG_SLEEP		(1 <<  0)
+#define DBG_STOP 		(1 <<  1)
+#define DBG_STANDBY		(1 <<  2)
 #define ARM_CPUID	0xE000ED00
 
 #define AXIM_BASE 0x8000000
@@ -197,8 +199,7 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 static void stm32f7_detach(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	target_mem_write32(t, DBGMCU_CR, ap->ap_storage);
+	target_mem_write32(t, DBGMCU_CR, 0);
 	cortexm_detach(t);
 }
 
