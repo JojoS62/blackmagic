@@ -388,62 +388,29 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 #define PROBE(x) \
 	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
-	switch (ap->ap_designer) {
-	case AP_DESIGNER_FREESCALE:
-		PROBE(kinetis_probe);
-		break;
-	case AP_DESIGNER_STM:
+	if (ap->ap_designer == AP_DESIGNER_STM) {
 		PROBE(stm32f1_probe);
 		PROBE(stm32f4_probe);
 		PROBE(stm32h7_probe);
-		PROBE(stm32l0_probe);
+		PROBE(stm32l0_probe);   /* STM32L0xx & STM32L1xx */
 		PROBE(stm32l4_probe);
-		break;
-	case AP_DESIGNER_CYPRESS:
-		DEBUG_WARN("Unhandled Cypress device\n");
-		break;
-	case AP_DESIGNER_INFINEON:
-		DEBUG_WARN("Unhandled Infineon device\n");
-		break;
-	case AP_DESIGNER_NORDIC:
-		PROBE(nrf51_probe);
-		break;
-	case AP_DESIGNER_ATMEL:
-		PROBE(sam4l_probe);
-		PROBE(samd_probe);
-		PROBE(samx5x_probe);
-		break;
-	case AP_DESIGNER_ARM:
-		if (ap->ap_partno == 0x4c3)  /* Care for STM32F1 clones */
-			PROBE(stm32f1_probe);
-		PROBE(sam3x_probe);
-		PROBE(lpc11xx_probe); /* LPC24C11 */
-		break;
-	case AP_DESIGNER_ENERGY_MICRO:
-		PROBE(efm32_probe);
-		break;
-	case AP_DESIGNER_TEXAS:
-		PROBE(msp432_probe);
-		break;
-	case AP_DESIGNER_SPECULAR:
-		PROBE(lpc11xx_probe); /* LPC845 */
-		break;
-	default:
-#if PC_HOSTED == 0
-        gdb_outf("Please report Designer %3x and Partno %3x and the probed "
-				 "device\n", ap->ap_designer, ap->ap_partno);
-#else
-		DEBUG_WARN("Please report Designer %3x and Partno %3x and the probed "
-				 "device\n", ap->ap_designer, ap->ap_partno);
-#endif
-		PROBE(lpc11xx_probe); /* Let's get feedback if LPC11 is also Specular*/
+	} else {
+		PROBE(lpc11xx_probe);
 		PROBE(lpc15xx_probe);
 		PROBE(lpc43xx_probe);
+		PROBE(sam3x_probe);
+		PROBE(sam4l_probe);
+		PROBE(nrf51_probe);
+		PROBE(samd_probe);
+		PROBE(samx5x_probe);
 		PROBE(lmi_probe);
+		PROBE(kinetis_probe);
+		PROBE(efm32_probe);
+		PROBE(msp432_probe);
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
-	}
 #undef PROBE
+	}
 	return true;
 }
 
