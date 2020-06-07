@@ -415,6 +415,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
         case AP_DESIGNER_ENERGY_MICRO:
             PROBE(efm32_probe);
 			break;
+        case AP_DESIGNER_TEXAS:
+            PROBE(msp432_probe);
+			break;
         default:
             PROBE(lpc11xx_probe);
             PROBE(lpc15xx_probe);
@@ -422,7 +425,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
             PROBE(nrf51_probe);
             PROBE(lmi_probe);
             PROBE(kinetis_probe);
-            PROBE(msp432_probe);
             PROBE(ke04_probe);
             PROBE(lpc17xx_probe);
         }
