@@ -54,6 +54,8 @@ static void swdptap_turnaround(int dir)
 	}
 	
 	swdClk = 1;
+	swdClk = 1;
+	swdClk = 1;
 	swdClk = 0;
 
 	if (dir == SWDIO_STATUS_DRIVE) {
@@ -91,6 +93,10 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	}
 	swdClk = 1;
 	swdClk = 0;
+
+	if (ticks == 32) {
+		swdptap_turnaround(SWDIO_STATUS_DRIVE);
+	}
 
 	return (parity & 1);
 }

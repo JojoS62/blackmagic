@@ -62,7 +62,7 @@ int adiv5_swdp_scan(void)
 	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
 	swd_proc.swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
 	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 24);
 
 	swd_proc.swdptap_seq_out(0, 16);
 
@@ -147,13 +147,13 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	do {
 		swd_proc.swdptap_seq_out(request, 8);
 		ack = swd_proc.swdptap_seq_in(3);
-		if (ack == SWDP_ACK_FAULT) {
-			/* On fault, abort() and repeat the command once.*/
-			printf("reapeat fix\n");
-			firmware_swdp_error(dp);
-			swd_proc.swdptap_seq_out(request, 8);
-			ack = swd_proc.swdptap_seq_in(3);
-		}	
+		// if (ack == SWDP_ACK_FAULT) {
+		// 	/* On fault, abort() and repeat the command once.*/
+		// 	printf("reapeat fix\n");
+		// 	firmware_swdp_error(dp);
+		// 	swd_proc.swdptap_seq_out(request, 8);
+		// 	ack = swd_proc.swdptap_seq_in(3);
+		// }	
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
@@ -174,7 +174,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	if(RnW) {
 		if(swd_proc.swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
 		{
-			printf("*** Parity Error ***   RnW:%d  addr:%d  value:%ld\n", RnW, addr, value);
+			printf("*** Parity Error ***   RnW:%d  addr:%d  value:%ld  response:%lx\n", RnW, addr, value, response);
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 		}
 	} else {
