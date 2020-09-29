@@ -147,14 +147,29 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	do {
 		swd_proc.swdptap_seq_out(request, 8);
 		ack = swd_proc.swdptap_seq_in(3);
-		// if (ack == SWDP_ACK_FAULT) {
-		// 	/* On fault, abort() and repeat the command once.*/
-		// 	printf("reapeat fix\n");
-		// 	firmware_swdp_error(dp);
-		// 	swd_proc.swdptap_seq_out(request, 8);
-		// 	ack = swd_proc.swdptap_seq_in(3);
-		// }	
-	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
+		if (ack == SWDP_ACK_WAIT) {
+			swd_proc.swdptap_seq_out(0, 8);
+		}
+		
+		if (ack == SWDP_ACK_FAULT) {
+			/* Switch from JTAG to SWD mode */
+			// swd_proc.swdptap_seq_out(0xFFFFFFFF, 16);
+			// swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+			// swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+			// swd_proc.swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+			// swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+			// swd_proc.swdptap_seq_out(0xFFFFFFFF, 24);
+
+			// swd_proc.swdptap_seq_out(0, 16);
+
+
+			/* On fault, abort() and repeat the command once.*/
+			printf("*** ACK Fault, retry\n");
+			firmware_swdp_error(dp);
+			swd_proc.swdptap_seq_out(request, 8);
+			ack = swd_proc.swdptap_seq_in(3);
+		}	
+	} while ((ack == SWDP_ACK_WAIT)  && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
 		printf("*** ACK Timeout ***        RnW:%d  addr:%d  value:%ld\n", RnW, addr, value);
