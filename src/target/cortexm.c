@@ -265,6 +265,7 @@ static void cortexm_priv_free(void *priv)
 
 static bool cortexm_forced_halt(target *t)
 {
+	DEBUG_WARN("cortexm_forced_halt\n");
 	target_halt_request(t);
 	platform_srst_set_val(false);
 	uint32_t dhcsr = 0;
