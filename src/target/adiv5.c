@@ -393,6 +393,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 		case 0x449:
 		case 0x451:
 		case 0x452:
+			ap->ap_spare = adiv5_mem_read32(ap, dbgmcu_cr_addr);
 			dbgmcu_cr = 7;
 			adiv5_mem_write(ap, dbgmcu_cr_addr, &dbgmcu_cr, sizeof(dbgmcu_cr));
 			break;

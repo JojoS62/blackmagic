@@ -195,6 +195,7 @@ struct ADIv5_AP_s {
 	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
 	uint16_t ap_designer;
 	uint16_t ap_partno;
+	uint32_t ap_spare;
 };
 
 #if PC_HOSTED == 0
