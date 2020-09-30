@@ -60,7 +60,7 @@ static void swdptap_turnaround(int dir)
 
 	if (dir == SWDIO_STATUS_DRIVE) {
 		swdDIO.output();
-		swdDIO=1;
+		//swdDIO=1;
 	}
 }
 
