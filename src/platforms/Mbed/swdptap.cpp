@@ -60,7 +60,7 @@ static void swdptap_turnaround(int dir)
 
 	if (dir == SWDIO_STATUS_DRIVE) {
 		swdDIO.output();
-		//swdDIO=1;
+		swdDIO=1;
 	}
 }
 
@@ -105,12 +105,17 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 static void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
+	bool trailing_bits = ticks==2;
 
 	while (ticks--) {
 		swdDIO = MS & 1;
 		MS >>= 1;
 		swdClk = 1;
 		swdClk = 0;
+	}
+
+	if (trailing_bits) {
+		swdDIO = 1;
 	}
 }
 
