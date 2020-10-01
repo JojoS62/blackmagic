@@ -268,10 +268,7 @@ static void stm32l_add_eeprom(target *t, uint32_t addr, size_t length)
     STM32L0xx parts as well as the STM32L1xx's. */
 bool stm32l0_probe(target* t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t idcode = ap->ap_partno;
-
-	switch (idcode) {
+	switch (t->idcode) {
 	case 0x416:                   /* CAT. 1 device */
 	case 0x429:                   /* CAT. 2 device */
 	case 0x427:                   /* CAT. 3 device */
