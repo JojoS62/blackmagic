@@ -68,7 +68,7 @@ extern jtag_proc_t jtag_proc;
 #define jtagtap_return_idle()	\
 	jtag_proc.jtagtap_tms_seq(0x01, 2)
 
-# if PC_HOSTED == 1 && !defined(__MBED__)
+# if PC_HOSTED == 1
 int platform_jtagtap_init(void);
 # else
 int jtagtap_init(void);
