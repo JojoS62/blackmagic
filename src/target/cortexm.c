@@ -377,12 +377,18 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
 	switch (ap->ap_designer) {
+	case AP_DESIGNER_FREESCALE:
+		PROBE(kinetis_probe);
+		break;
 	case AP_DESIGNER_STM:
 		PROBE(stm32f1_probe);
 		PROBE(stm32f4_probe);
 		PROBE(stm32h7_probe);
 		PROBE(stm32l0_probe);
 		PROBE(stm32l4_probe);
+		break;
+	case AP_DESIGNER_CYPRESS:
+		DEBUG_WARN("Unhandled Cypress device\n");
 		break;
 	case AP_DESIGNER_ATMEL:
 		PROBE(sam4l_probe);
@@ -400,6 +406,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case AP_DESIGNER_TEXAS:
 		PROBE(msp432_probe);
 		break;
+	case AP_DESIGNER_SPECULAR:
+		PROBE(lpc11xx_probe);
+		break;
 	default:
 #if PC_HOSTED == 0
         gdb_outf("Please report Designer %3x and Partno %3x and the probed "
@@ -408,12 +417,11 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		DEBUG_WARN("Please report Designer %3x and Partno %3x and the probed "
 				 "device\n", ap->ap_designer, ap->ap_partno);
 #endif
-		PROBE(lpc11xx_probe);
+		PROBE(lpc11xx_probe); /* Let's get feedback if LPC11 is also Specular*/
 		PROBE(lpc15xx_probe);
 		PROBE(lpc43xx_probe);
 		PROBE(nrf51_probe);
 		PROBE(lmi_probe);
-		PROBE(kinetis_probe);
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
 	}
