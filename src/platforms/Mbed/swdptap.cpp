@@ -31,17 +31,17 @@ enum {
 };
 
 extern "C" {
-static void swdptap_turnaround(int dir) __attribute__ ((optimize(3)));
-static uint32_t swdptap_seq_in(int ticks) __attribute__ ((optimize(3)));
-static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)	__attribute__ ((optimize(3)));
-static void swdptap_seq_out(uint32_t MS, int ticks)	__attribute__ ((optimize(3)));
-static void swdptap_seq_out_parity(uint32_t MS, int ticks)	__attribute__ ((optimize(3)));
+// static void swdptap_turnaround(int dir) __attribute__ ((optimize(3)));
+// static uint32_t swdptap_seq_in(int ticks) __attribute__ ((optimize(3)));
+// static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)	__attribute__ ((optimize(3)));
+// static void swdptap_seq_out(uint32_t MS, int ticks)	__attribute__ ((optimize(3)));
+// static void swdptap_seq_out_parity(uint32_t MS, int ticks)	__attribute__ ((optimize(3)));
 
-// static void swdptap_turnaround(int dir);
-// static uint32_t swdptap_seq_in(int ticks);
-// static bool swdptap_seq_in_parity(uint32_t *ret, int ticks);
-// static void swdptap_seq_out(uint32_t MS, int ticks);
-// static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+static void swdptap_turnaround(int dir);
+static uint32_t swdptap_seq_in(int ticks);
+static bool swdptap_seq_in_parity(uint32_t *ret, int ticks);
+static void swdptap_seq_out(uint32_t MS, int ticks);
+static void swdptap_seq_out_parity(uint32_t MS, int ticks);
 }
 
 // changing GPIO speed tested only with STM32F407
@@ -96,9 +96,9 @@ DigitalInOut swdDIO(PB_8, PIN_OUTPUT, PullNone, 1);
 constexpr uint16_t DELAY_CYCLES = 1;
 void clockDelay(uint16_t n) 
 {
-	// while(--n) {
-	// 	__NOP();
-	// };
+	while(--n) {
+		__NOP();
+	};
 }
 
 static void swdptap_turnaround(int dir)
@@ -173,11 +173,11 @@ static void swdptap_seq_out(uint32_t MS, int ticks)
 
 	while (ticks--) {
 		swdDIO = MS & 1;
-		MS >>= 1;
 		swdClk = 1;
 		clockDelay(DELAY_CYCLES);
 		swdClk = 0;
 		clockDelay(DELAY_CYCLES);
+		MS >>= 1;
 	}
 
 	if (trailing_bits) {
