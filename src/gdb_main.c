@@ -54,6 +54,7 @@ static target *cur_target;
 static target *last_target;
 
 static void handle_q_packet(char *packet, int len);
+static void handle_Q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
 static void handle_z_packet(char *packet, int len);
 
@@ -310,6 +311,10 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			handle_q_packet(pbuf, size);
 			break;
 
+		case 'Q':	/* General query packet */
+			handle_Q_packet(pbuf, size);
+			break;
+
 		case 'v':	/* General query packet */
 			handle_v_packet(pbuf, size);
 			break;
@@ -376,8 +381,7 @@ handle_q_packet(char *packet, int len)
 
 	} else if (!strncmp (packet, "qSupported", 10)) {
 		/* Query supported protocol features */
-		gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
-
+		gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;QStartNoAckMode+;", BUF_SIZE);
 	} else if (strncmp (packet, "qXfer:memory-map:read::", 23) == 0) {
 		/* Read target XML memory map */
 		if((!cur_target) && last_target) {
@@ -412,6 +416,18 @@ handle_q_packet(char *packet, int len)
 		}
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
 
+	} else {
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+		gdb_putpacket("", 0);
+	}
+}
+
+static void
+handle_Q_packet(char *packet, int plen)
+{
+	if (!strncmp (packet, "QStartNoAckMode", 15)) {
+		no_ack_mode = 1;
+		gdb_putpacketz("OK");
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
