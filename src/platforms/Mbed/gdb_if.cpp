@@ -147,6 +147,7 @@ unsigned char gdb_if_getchar(void)
 			if (sockClient) {
 				sockClient->close();
 				sockClient = nullptr;
+				no_ack_mode = 0;
 			}
 		}
 		return '+';
@@ -176,6 +177,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 			if (sockClient) {
 				sockClient->close();
 				sockClient = nullptr;
+				no_ack_mode = 0;
 			}
 			ThisThread::sleep_for(5ms);
 		}
@@ -205,6 +207,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 			if (sizeOrError < 0) {
 				sockClient->close();
 				sockClient = nullptr;
+				no_ack_mode = 0;
 			}
 		}
 	}
