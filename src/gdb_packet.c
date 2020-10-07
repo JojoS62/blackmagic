@@ -30,6 +30,8 @@
 
 #include <stdarg.h>
 
+int no_ack_mode = 0;
+
 int gdb_getpacket(char *packet, int size)
 {
 	unsigned char c;
@@ -47,7 +49,7 @@ int gdb_getpacket(char *packet, int size)
 				packet[0] = gdb_if_getchar();
 				if (packet[0]==0x04) return 1;
 			} while ((packet[0] != '$') && (packet[0] != REMOTE_SOM));
-#if (PC_HOSTED == 0) && !defined(__MBED__)
+#if (PC_HOSTED == 0)
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
 				 * - get and handle it */
@@ -113,9 +115,13 @@ int gdb_getpacket(char *packet, int size)
 		if(csum == strtol(recv_csum, NULL, 16)) break;
 
 		/* get here if checksum fails */
-		gdb_if_putchar('-', 1); /* send nack */
+		if (no_ack_mode == 0) {
+			gdb_if_putchar('-', 1); /* send nack */
+		}
 	}
-	gdb_if_putchar('+', 1); /* send ack */
+	if (no_ack_mode == 0) {
+		gdb_if_putchar('+', 1); /* send ack */
+	}
 	packet[i] = 0;
 
 #if (PC_HOSTED == 1) || defined(__MBED__)
@@ -168,7 +174,7 @@ void gdb_putpacket(const char *packet, int size)
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB_WIRE("\n");
-	} while((gdb_if_getchar_to(2000) != '+') && (tries++ < 3));
+	} while( (no_ack_mode == 0) && ((gdb_if_getchar_to(2000) != '+') && (tries++ < 3)));
 }
 
 void gdb_putpacket_f(const char *fmt, ...)

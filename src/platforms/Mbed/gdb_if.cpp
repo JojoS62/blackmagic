@@ -27,6 +27,7 @@
 #include "NetworkInterface.h"
 
 #include "general.h"
+#include "gdb_packet.h"
 #include "gdb_if.h"
 
 #define DEFAULT_PORT 2000
@@ -87,6 +88,9 @@ void waitForConnection()
         SocketAddress sockAddrClient;
         sockClient->getpeername(&sockAddrClient);
         printf("connected to %s\n", sockAddrClient.get_ip_address());
+
+	    // int optval = 1;
+		// sockClient->setsockopt(6, 1, &optval,  sizeof(optval));
     }
 }
 
@@ -95,6 +99,7 @@ void closeSocket()
 	if (sockClient) {
 		sockClient->close();
 		sockClient = nullptr;
+		no_ack_mode = 0;
 	}
 }
 
