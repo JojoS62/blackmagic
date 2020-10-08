@@ -96,9 +96,9 @@ DigitalInOut swdDIO(PB_8, PIN_OUTPUT, PullNone, 1);
 constexpr uint16_t DELAY_CYCLES = 1;
 void clockDelay(uint16_t n) 
 {
-	while(--n) {
+	// while(--n) {
 		__NOP();
-	};
+	// };
 }
 
 static void swdptap_turnaround(int dir)
